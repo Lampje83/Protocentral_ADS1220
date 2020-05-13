@@ -39,6 +39,8 @@
 #define CONFIG_REG3_ADDRESS 0x03
 
 #define REG_CONFIG1_DR_MASK       0xE0
+#define REG_CONFIG1_OM_MASK       0x18
+#define REG_CONFIG1_TS_MASK       0x02
 #define REG_CONFIG0_PGA_GAIN_MASK 0x0E
 #define REG_CONFIG0_MUX_MASK      0xF0
 
@@ -49,6 +51,10 @@
 #define DR_330SPS   0x80
 #define DR_600SPS   0xA0
 #define DR_1000SPS  0xC0
+
+#define OM_NORMAL       0x00
+#define OM_DUTY_CYCLE   0x08
+#define OM_TURBO        0x10
 
 #define PGA_GAIN_1   0x00
 #define PGA_GAIN_2   0x02
@@ -71,13 +77,12 @@
 #define MUX_AIN1_AVSS   0x90
 #define MUX_AIN2_AVSS   0xA0
 #define MUX_AIN3_AVSS   0xB0
+#define MUX_AINP_AINN_SHORTED   0xE0
 
 #define MUX_SE_CH0      0x80
 #define MUX_SE_CH1      0x90
 #define MUX_SE_CH2      0xA0
 #define MUX_SE_CH3      0xB0
-
-#define _BV(bit) (1<<(bit))
 
 class Protocentral_ADS1220
 {
@@ -105,7 +110,7 @@ private:
       void SPI_Command(unsigned char data_in);
       void writeRegister(uint8_t address, uint8_t value);
       uint8_t readRegister(uint8_t address);
-      uint8_t * Read_Data(void);
+      int32_t Read_Data(void);
       int32_t Read_WaitForData();
 
       uint8_t * get_config_reg(void);
@@ -115,6 +120,8 @@ private:
       void set_conv_mode_continuous(void);
       void Single_shot_mode_ON(void);
       void set_data_rate(int datarate);
+      void set_operating_mode(int mode);
+      void set_temp_sens_mode(bool enable);
       void set_pga_gain(int pgagain);
       void select_mux_channels(int channels_conf);
       void set_conv_mode_single_shot(void);

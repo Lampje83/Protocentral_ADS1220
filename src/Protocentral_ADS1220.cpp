@@ -65,7 +65,8 @@ void Protocentral_ADS1220::begin(uint8_t cs_pin, uint8_t drdy_pin)
 #if defined(BOARD_SENSYTHING)
     SPI.begin(18, 35, 23, 19);
 #else
-    SPI.begin();
+    // ERIK: TTGO externe SPI
+    SPI.begin(17, 12, 13, 15);
 #endif
     SPI.setBitOrder(MSBFIRST);
     SPI.setDataMode(SPI_MODE1);
@@ -162,6 +163,17 @@ void Protocentral_ADS1220::set_data_rate(int datarate)
     writeRegister(CONFIG_REG1_ADDRESS,m_config_reg1);
 }
 
+void Protocentral_ADS1220::set_operating_mode(int datarate) {
+  m_config_reg1 &= ~REG_CONFIG1_OM_MASK;
+  m_config_reg1 |= datarate;
+  writeRegister(CONFIG_REG1_ADDRESS, m_config_reg1);
+}
+
+void Protocentral_ADS1220::set_temp_sens_mode(bool enable) {
+  m_config_reg1 &= ~REG_CONFIG1_TS_MASK;
+  m_config_reg1 |= enable << 1;
+}
+
 void Protocentral_ADS1220::select_mux_channels(int channels_conf)
 {
     m_config_reg0 &= ~REG_CONFIG0_MUX_MASK;
@@ -193,13 +205,39 @@ uint8_t * Protocentral_ADS1220::get_config_reg()
     return config_Buff;
 }
 
+int32_t Protocentral_ADS1220::Read_Data() {
+  static byte SPI_Buff[3];
+  static int32_t mResult32 = 0;
+  long int bit24;
+
+  digitalWrite(m_cs_pin, LOW);  // Take CS low
+  delayMicroseconds(100);
+  for (int i = 0; i < 3; i++) {
+    SPI_Buff[i] = SPI.transfer(SPI_MASTER_DUMMY);
+  }
+  delayMicroseconds(100);
+  digitalWrite(m_cs_pin, HIGH);  //  Clear CS to high
+
+  bit24 = SPI_Buff[0];
+  bit24 = (bit24 << 8) | SPI_Buff[1];
+  bit24 = (bit24 << 8) | SPI_Buff[2];  // Converting 3 bytes to a 24 bit int
+
+  bit24 = (bit24 << 8);
+  mResult32 = (bit24 >> 8);  // Converting 24 bit two's complement to 32 bit two's complement
+  return mResult32;
+}
+
 int32_t Protocentral_ADS1220::Read_WaitForData()
 {
     static byte SPI_Buff[3];
     int32_t mResult32=0;
     long int bit24;
 
-    if((digitalRead(m_drdy_pin)) == LOW)             //        Wait for DRDY to transition low
+    while ((digitalRead(m_drdy_pin)) != LOW) {
+      //        Wait for DRDY to transition low
+      delay(1);
+    }
+
     {
         digitalWrite(m_cs_pin,LOW);                         //Take CS low
         delayMicroseconds(100);
